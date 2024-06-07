@@ -33,7 +33,7 @@
 
 <script lang="ts">
 
-import {BasicConstraintsExtension, KeyUsageFlags, KeyUsagesExtension, X509CertificateGenerator} from "@peculiar/x509";
+import {BasicConstraintsExtension, KeyUsageFlags, KeyUsagesExtension, Pkcs10CertificateRequestGenerator} from "@peculiar/x509";
 
 export default {
   data() {
@@ -75,31 +75,24 @@ export default {
     },
     async generateCSR() {
       const alg = {
-        name: "RSASSA-PKCS1-v1_5",
-        hash: "SHA-256",
-        modulusLength: 4096,
-        publicExponent: new Uint8Array([1, 0, 1]),
-      };
+        name: "ECDSA",
+        namedCurve: "P-384",
+        hash: "SHA-384",
+      }
 
       let keyUsages = KeyUsageFlags.digitalSignature;
 
-      const extensions = [
-        new BasicConstraintsExtension(false, undefined, true)
-      ];
 
-      if (keyUsages) {
-        extensions.push(new KeyUsagesExtension(keyUsages, true));
-      }
-
-      const cert = await X509CertificateGenerator.createSelfSigned({
-        serialNumber: "01",
+      const cert = await Pkcs10CertificateRequestGenerator.create({
         name: this.getCertSubject(),
         signingAlgorithm: alg,
         keys: this.keyPair,
-        extensions
+        extensions: [
+          new KeyUsagesExtension(KeyUsageFlags.digitalSignature | KeyUsageFlags.keyEncipherment),
+        ],
       });
 
-      this.csr = cert.toString("pem")
+      this.csr = cert.toString("base64")
     },
     async generateKeys() {
       this.keyPair = await window.crypto.subtle.generateKey(
